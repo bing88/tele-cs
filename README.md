@@ -159,16 +159,38 @@ npm start
 
 3. **Set Environment Variables** in Vercel:
    - Go to Project Settings → Environment Variables
-   - Add the following:
+   - **IMPORTANT**: Make sure to select the correct environment (Production, Preview, Development)
+   - Add the following variables (one by one):
      ```
-     TELEGRAM_BOT_TOKEN=your_bot_token
-     TELEGRAM_WEBHOOK_SECRET=your_secret
-     TELEGRAM_WEBHOOK_URL=https://your-app.vercel.app/api/webhook
-     OPENAI_API_KEY=your_openai_key
-     NEXT_PUBLIC_APP_URL=https://your-app.vercel.app
+     Name: TELEGRAM_BOT_TOKEN
+     Value: your_bot_token
+     Environment: Production, Preview, Development (select all)
+     
+     Name: TELEGRAM_WEBHOOK_SECRET
+     Value: your_secret
+     Environment: Production, Preview, Development (select all)
+     
+     Name: TELEGRAM_WEBHOOK_URL
+     Value: https://your-app.vercel.app/api/webhook
+     Environment: Production, Preview, Development (select all)
+     
+     Name: OPENAI_API_KEY
+     Value: your_openai_key
+     Environment: Production, Preview, Development (select all)
+     
+     Name: NEXT_PUBLIC_APP_URL
+     Value: https://your-app.vercel.app
+     Environment: Production, Preview, Development (select all)
      ```
+   - **CRITICAL**: After adding/changing environment variables, you MUST redeploy:
+     - Go to Deployments tab
+     - Click the "..." menu on the latest deployment
+     - Select "Redeploy"
+     - OR push a new commit to trigger redeploy
 
-4. **Deploy** - Vercel will automatically deploy
+4. **Verify Environment Variables**:
+   - After redeploy, check the deployment logs
+   - Environment variables are only available after redeploy
 
 5. **Set Telegram Webhook**:
    ```bash
@@ -186,10 +208,17 @@ npm start
 
 **Common causes:**
 
-1. **Missing Environment Variables on Vercel**
+1. **Missing Environment Variables on Vercel** ⚠️ MOST COMMON
    - Go to Vercel Dashboard → Your Project → Settings → Environment Variables
-   - Ensure `TELEGRAM_BOT_TOKEN` and `OPENAI_API_KEY` are set
-   - Redeploy after adding variables
+   - **Check the environment**: Make sure variables are set for "Production" (not just Preview/Development)
+   - **Verify variable names**: Must be exactly:
+     - `OPENAI_API_KEY` (not `OPENAI_KEY` or `OPENAI_API`)
+     - `TELEGRAM_BOT_TOKEN` (not `TELEGRAM_TOKEN`)
+   - **Redeploy is REQUIRED**: After adding/changing variables:
+     1. Go to Deployments tab
+     2. Click "..." on latest deployment → "Redeploy"
+     3. OR push a commit to trigger auto-deploy
+   - **Check deployment logs**: After redeploy, verify no "is not set" errors
 
 2. **Invalid Telegram Bot Token**
    - Verify token at [@BotFather](https://t.me/botfather)
