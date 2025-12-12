@@ -10,11 +10,14 @@ function generateId(): string {
 }
 
 // Store a message
-export function addMessage(message: Omit<Message, 'id' | 'createdAt'>): Message {
+export function addMessage(
+  message: Omit<Message, 'id' | 'createdAt'>,
+  createdAt?: Date
+): Message {
   const newMessage: Message = {
     ...message,
     id: generateId(),
-    createdAt: new Date(),
+    createdAt: createdAt || new Date(),
   };
 
   messages.push(newMessage);
@@ -109,8 +112,7 @@ export function generateSampleData(): void {
     translatedText: 'Hello, I have a question about the product.',
     language: 'ko',
     status: 'sent',
-    createdAt: new Date(now.getTime() - 10 * 60000), // 10 minutes ago
-  });
+  }, new Date(now.getTime() - 10 * 60000)); // 10 minutes ago
 
   addMessage({
     telegramChatId: chatId1,
@@ -122,8 +124,7 @@ export function generateSampleData(): void {
     translatedText: '안녕하세요! 오늘 어떻게 도와드릴까요?',
     language: 'en',
     status: 'sent',
-    createdAt: new Date(now.getTime() - 9 * 60000), // 9 minutes ago
-  });
+  }, new Date(now.getTime() - 9 * 60000)); // 9 minutes ago
 
   addMessage({
     telegramChatId: chatId1,
@@ -135,8 +136,7 @@ export function generateSampleData(): void {
     translatedText: 'When will the delivery arrive?',
     language: 'ko',
     status: 'sent',
-    createdAt: new Date(now.getTime() - 8 * 60000), // 8 minutes ago
-  });
+  }, new Date(now.getTime() - 8 * 60000)); // 8 minutes ago
 
   addMessage({
     telegramChatId: chatId1,
@@ -148,8 +148,7 @@ export function generateSampleData(): void {
     translatedText: '주문하신 상품은 영업일 기준 2-3일 내에 도착할 예정입니다.',
     language: 'en',
     status: 'sent',
-    createdAt: new Date(now.getTime() - 7 * 60000), // 7 minutes ago
-  });
+  }, new Date(now.getTime() - 7 * 60000)); // 7 minutes ago
 
   addMessage({
     telegramChatId: chatId1,
@@ -161,8 +160,7 @@ export function generateSampleData(): void {
     translatedText: 'Thank you!',
     language: 'ko',
     status: 'sent',
-    createdAt: new Date(now.getTime() - 2 * 60000), // 2 minutes ago
-  });
+  }, new Date(now.getTime() - 2 * 60000)); // 2 minutes ago
 
   // Sample conversation 2: 이지은 (Lee Jieun)
   const chatId2 = '987654321';
@@ -178,8 +176,7 @@ export function generateSampleData(): void {
     translatedText: 'I would like to request a refund.',
     language: 'ko',
     status: 'sent',
-    createdAt: new Date(now.getTime() - 15 * 60000), // 15 minutes ago
-  });
+  }, new Date(now.getTime() - 15 * 60000)); // 15 minutes ago
 
   addMessage({
     telegramChatId: chatId2,
@@ -191,8 +188,7 @@ export function generateSampleData(): void {
     translatedText: '도와드리겠습니다. 주문 번호를 알려주실 수 있나요?',
     language: 'en',
     status: 'sent',
-    createdAt: new Date(now.getTime() - 14 * 60000), // 14 minutes ago
-  });
+  }, new Date(now.getTime() - 14 * 60000)); // 14 minutes ago
 
   addMessage({
     telegramChatId: chatId2,
@@ -204,8 +200,7 @@ export function generateSampleData(): void {
     translatedText: 'The order number is ORD-12345.',
     language: 'ko',
     status: 'sent',
-    createdAt: new Date(now.getTime() - 13 * 60000), // 13 minutes ago
-  });
+  }, new Date(now.getTime() - 13 * 60000)); // 13 minutes ago
 
   // Sample conversation 3: 박서준 (Park Seojun)
   const chatId3 = '555666777';
@@ -221,8 +216,7 @@ export function generateSampleData(): void {
     translatedText: 'The product arrived damaged.',
     language: 'ko',
     status: 'sent',
-    createdAt: new Date(now.getTime() - 30 * 60000), // 30 minutes ago
-  });
+  }, new Date(now.getTime() - 30 * 60000)); // 30 minutes ago
 
   addMessage({
     telegramChatId: chatId3,
@@ -234,8 +228,7 @@ export function generateSampleData(): void {
     translatedText: '불편을 드려 죄송합니다. 손상된 제품 사진을 보내주세요.',
     language: 'en',
     status: 'sent',
-    createdAt: new Date(now.getTime() - 29 * 60000), // 29 minutes ago
-  });
+  }, new Date(now.getTime() - 29 * 60000)); // 29 minutes ago
 
   addMessage({
     telegramChatId: chatId3,
@@ -247,8 +240,7 @@ export function generateSampleData(): void {
     translatedText: 'I will send you the photos.',
     language: 'ko',
     status: 'sent',
-    createdAt: new Date(now.getTime() - 28 * 60000), // 28 minutes ago
-  });
+  }, new Date(now.getTime() - 28 * 60000)); // 28 minutes ago
 
   // Sample conversation 4: 최유나 (Choi Yuna) - New conversation
   const chatId4 = '111222333';
@@ -264,7 +256,6 @@ export function generateSampleData(): void {
     translatedText: 'Hello, is the product in stock?',
     language: 'ko',
     status: 'sent',
-    createdAt: new Date(now.getTime() - 1 * 60000), // 1 minute ago
-  });
+  }, new Date(now.getTime() - 1 * 60000)); // 1 minute ago
 }
 
