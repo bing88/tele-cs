@@ -9,11 +9,21 @@ export async function GET(request: NextRequest) {
     if (chatId) {
       // Get messages for specific chat
       const messages = getMessagesByChatId(chatId);
-      return NextResponse.json({ messages });
+      return NextResponse.json({ 
+        messages,
+        // Note: In serverless environments, each instance has isolated memory
+        // Data may vary between requests hitting different instances
+        _warning: process.env.VERCEL ? 'Serverless: Data may vary between instances' : undefined
+      });
     } else {
       // Get all conversations
       const conversations = getAllConversations();
-      return NextResponse.json({ conversations });
+      return NextResponse.json({ 
+        conversations,
+        // Note: In serverless environments, each instance has isolated memory
+        // Data may vary between requests hitting different instances
+        _warning: process.env.VERCEL ? 'Serverless: Data may vary between instances' : undefined
+      });
     }
   } catch (error) {
     console.error('Error fetching messages:', error);

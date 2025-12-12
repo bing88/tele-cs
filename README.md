@@ -134,7 +134,13 @@ telegram-cs/
 
 ⚠️ **In-Memory Storage**: All messages are stored in memory and will be lost when the server restarts.
 
-For production use, consider adding a database (PostgreSQL, MongoDB, etc.).
+⚠️ **Serverless Environment (Vercel)**: In serverless environments, each API request may hit a different function instance with its own isolated memory. This means:
+- Data is not shared between different serverless function instances
+- You may see inconsistent data when hitting the same endpoint multiple times
+- Each instance maintains its own separate in-memory store
+- This is why it works fine locally (single process) but shows inconsistencies in Vercel
+
+**For production use**, you **MUST** use a shared database (PostgreSQL, MongoDB, Redis, etc.) instead of in-memory storage.
 
 ## Development
 
