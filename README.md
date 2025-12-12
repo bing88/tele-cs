@@ -128,6 +128,7 @@ telegram-cs/
 - `GET /api/messages/[chatId]` - Get messages for a chat
 - `POST /api/messages/[chatId]/reply` - Send reply to user
 - `POST /api/translate` - Translate text
+- `GET /api/seed` - Generate sample data for local testing
 
 ## Demo Limitations
 
@@ -141,12 +142,32 @@ For production use, consider adding a database (PostgreSQL, MongoDB, etc.).
 # Run development server
 npm run dev
 
+# Generate sample data for local testing
+# Visit http://localhost:3000/api/seed in your browser
+# Or use curl:
+curl http://localhost:3000/api/seed
+
 # Build for production
 npm run build
 
 # Start production server
 npm start
 ```
+
+### Local Testing with Sample Data
+
+To test the UI locally without setting up Telegram:
+
+1. Start the development server: `npm run dev`
+2. Generate sample data by visiting: `http://localhost:3000/api/seed`
+3. Open the web portal: `http://localhost:3000`
+4. You should see 4 sample conversations with messages
+
+The sample data includes:
+- 4 different conversations (users: kimminsoo, jieunlee, seojunpark, yunachoi)
+- 12 messages total (mix of inbound Korean and outbound English)
+- All messages include translations
+- Realistic timestamps (ranging from 1-30 minutes ago)
 
 ## Deployment to Vercel
 
