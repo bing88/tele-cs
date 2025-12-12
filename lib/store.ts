@@ -1,5 +1,11 @@
 import { Message, Conversation } from './types';
-import { kv } from '@vercel/kv';
+import { Redis } from '@upstash/redis';
+
+// Initialize Upstash Redis client
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL || '',
+  token: process.env.UPSTASH_REDIS_REST_TOKEN || '',
+});
 
 // Generate unique ID
 function generateId(): string {
@@ -18,13 +24,13 @@ export async function addMessage(
   };
 
   // Store message in list (messages are stored as JSON strings in a list)
-  await kv.lpush(`messages:${message.telegramChatId}`, JSON.stringify(newMessage));
+  await redis.lpush(`messages:${message.telegramChatId}`, JSON.stringify(newMessage));
   
   // Add chat to conversations set
-  await kv.sadd('conversations', message.telegramChatId);
+  await redis.sadd('conversations', message.telegramChatId);
   
   // Store/update conversation metadata
-  await kv.hset(`conversation:${message.telegramChatId}`, {
+  await redis.hset(`conversation:${message.telegramChatId}`, {
     userId: message.telegramUserId.toString(),
     username: message.telegramUsername || '',
     lastActivity: newMessage.createdAt.toISOString(),
@@ -36,7 +42,7 @@ export async function addMessage(
 // Get all messages for a specific chat
 export async function getMessagesByChatId(chatId: string): Promise<Message[]> {
   try {
-    const messageStrings = await kv.lrange(`messages:${chatId}`, 0, -1);
+    const messageStrings = await redis.lrange(`messages:${chatId}`, 0, -1);
     if (!messageStrings || messageStrings.length === 0) {
       return [];
     }
@@ -69,7 +75,7 @@ export async function getMessagesByChatId(chatId: string): Promise<Message[]> {
 // Get all conversations (with latest message)
 export async function getAllConversations(): Promise<Conversation[]> {
   try {
-    const chatIds = await kv.smembers('conversations');
+    const chatIds = await redis.smembers('conversations');
     if (!chatIds || chatIds.length === 0) {
       return [];
     }
@@ -87,7 +93,7 @@ export async function getAllConversations(): Promise<Conversation[]> {
       const firstMessage = sorted[0];
 
       // Get conversation metadata
-      const metadata = await kv.hgetall(`conversation:${chatId}`);
+      const metadata = await redis.hgetall(`conversation:${chatId}`);
       
       convs.push({
         chatId: chatId as string,
@@ -113,7 +119,7 @@ export async function getAllConversations(): Promise<Conversation[]> {
 export async function getMessageById(id: string): Promise<Message | undefined> {
   try {
     // Get all conversations to search through
-    const chatIds = await kv.smembers('conversations');
+    const chatIds = await redis.smembers('conversations');
     
     for (const chatId of chatIds) {
       const messages = await getMessagesByChatId(chatId as string);
@@ -156,10 +162,13 @@ export async function updateMessageStatus(
     );
 
     // Replace the entire list (simpler than trying to update a single item)
-    await kv.del(`messages:${message.telegramChatId}`);
+    await redis.del(`messages:${message.telegramChatId}`);
     if (updatedMessages.length > 0) {
       const messageStrings = updatedMessages.map(msg => JSON.stringify(msg));
-      await kv.lpush(`messages:${message.telegramChatId}`, ...messageStrings);
+      // Upstash Redis lpush accepts array directly
+      if (messageStrings.length > 0) {
+        await redis.lpush(`messages:${message.telegramChatId}`, ...messageStrings);
+      }
     }
 
     return updatedMessage;
@@ -172,16 +181,18 @@ export async function updateMessageStatus(
 // Clear all messages (for testing/reset)
 export async function clearAll(): Promise<void> {
   try {
-    const chatIds = await kv.smembers('conversations');
+    const chatIds = await redis.smembers('conversations');
     
     // Delete all message lists
-    for (const chatId of chatIds) {
-      await kv.del(`messages:${chatId}`);
-      await kv.del(`conversation:${chatId}`);
+    if (chatIds && Array.isArray(chatIds)) {
+      for (const chatId of chatIds) {
+        await redis.del(`messages:${chatId}`);
+        await redis.del(`conversation:${chatId}`);
+      }
     }
     
     // Clear conversations set
-    await kv.del('conversations');
+    await redis.del('conversations');
   } catch (error) {
     console.error('Error clearing KV store:', error);
   }

@@ -10,39 +10,42 @@
 | **Supabase** | ⭐⭐ Medium | Free tier | ⭐⭐ Medium | Full-featured DB |
 | **MongoDB Atlas** | ⭐⭐⭐ Harder | Free tier | ⭐⭐ Medium | NoSQL preference |
 
-## Recommended: Vercel KV (Redis) ⭐
+## Recommended: Upstash Redis ⭐
 
-### Why Vercel KV is Best for Demo
+### Why Upstash Redis is Best for Demo
 
-✅ **Built into Vercel** - No external service setup  
-✅ **Free tier** - 30,000 reads/day, 1,000 writes/day (plenty for demo)  
+✅ **Serverless Redis** - Pay-as-you-go, no setup complexity  
+✅ **Free tier** - 10,000 commands/day, 256 MB storage (plenty for demo)  
 ✅ **Fast** - In-memory Redis, sub-millisecond latency  
 ✅ **Shared** - Works across all serverless instances  
 ✅ **Simple API** - Easy to integrate  
 ✅ **No cold starts** - Data persists between function invocations  
+✅ **Global distribution** - Low latency worldwide  
+⚠️ **Note**: Vercel KV has been deprecated, Upstash Redis is the recommended alternative  
 
 ### Setup Steps
 
-1. **Enable Vercel KV in Dashboard**
-   - Go to Vercel Dashboard → Your Project → Storage
-   - Click "Create Database" → Select "KV"
-   - Choose a name (e.g., `telegram-cs-kv`)
-   - Select region closest to you
+1. **Create Upstash Redis Database**
+   - Go to [Upstash Console](https://console.upstash.com/)
+   - Sign up (free account)
+   - Click "Create Database"
+   - Choose name and region
+   - Copy REST API credentials
 
 2. **Install Dependencies**
    ```bash
-   npm install @vercel/kv
+   npm install @upstash/redis
    ```
 
-3. **Environment Variables** (Auto-added by Vercel)
-   - `KV_REST_API_URL`
-   - `KV_REST_API_TOKEN`
-   - `KV_REST_API_READ_ONLY_TOKEN`
+3. **Add Environment Variables to Vercel**
+   - `UPSTASH_REDIS_REST_URL` (from Upstash console)
+   - `UPSTASH_REDIS_REST_TOKEN` (from Upstash console)
+   - Add to Production, Preview, Development
 
 4. **Migration Path**
-   - Replace in-memory arrays with KV operations
-   - Use Redis data structures (lists, hashes, sets)
-   - ~2-3 hours of work
+   - ✅ Already done! Code uses Upstash Redis
+   - Just need to set up database and env vars
+   - ~5 minutes of setup
 
 ### Code Example
 

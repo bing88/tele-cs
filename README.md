@@ -142,23 +142,25 @@ telegram-cs/
 
 **For production use**, you **MUST** use a shared database (PostgreSQL, MongoDB, Redis, etc.) instead of in-memory storage.
 
-### ✅ Migrated to Vercel KV (Redis)
+### ✅ Using Upstash Redis
 
-The app has been **migrated to Vercel KV**! This solves the serverless isolation problem.
+The app uses **Upstash Redis** (Vercel KV has been deprecated). This solves the serverless isolation problem.
 
 **Setup Required:**
-1. Go to Vercel Dashboard → Storage → Create Database → KV
-2. Name it (e.g., `telegram-cs-kv`)
-3. Deploy - environment variables are auto-added!
+1. Create database at [Upstash Console](https://console.upstash.com/)
+2. Add credentials to Vercel environment variables:
+   - `UPSTASH_REDIS_REST_URL`
+   - `UPSTASH_REDIS_REST_TOKEN`
+3. Redeploy
 
-See [VERCEL_KV_SETUP.md](./VERCEL_KV_SETUP.md) for setup instructions.
+See [UPSTASH_REDIS_SETUP.md](./UPSTASH_REDIS_SETUP.md) for detailed setup instructions.
 
 **Benefits:**
 - ✅ Consistent data across all serverless instances
 - ✅ Data persists between deployments
-- ✅ Free tier (30K reads/day, 1K writes/day)
+- ✅ Free tier (10K commands/day, 256 MB storage)
 - ✅ Fast (Redis, sub-millisecond latency)
-- ✅ Built into Vercel
+- ✅ Serverless (pay-as-you-go)
 
 See [STORAGE_OPTIONS.md](./STORAGE_OPTIONS.md) for detailed comparison.
 
