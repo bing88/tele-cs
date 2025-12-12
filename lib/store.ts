@@ -3,8 +3,8 @@ import { Redis } from '@upstash/redis';
 
 // Initialize Upstash Redis client
 const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL || '',
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || '',
+  url: process.env.UPSTASH_REDIS_REST_URL || 'https://quality-boxer-11182.upstash.io',
+  token: process.env.UPSTASH_REDIS_REST_TOKEN || 'ASuuAAIncDEwMWFjNDMxY2JlYjI0YTc4YWI5OGVkNTFlMDgwNTAxYXAxMTExODI',
 });
 
 // Generate unique ID
@@ -48,18 +48,34 @@ export async function getMessagesByChatId(chatId: string): Promise<Message[]> {
     }
     
     // Parse JSON strings back to Message objects
+    // Upstash Redis may return objects directly or JSON strings
     const messages = messageStrings
-      .map(str => {
+      .map(item => {
         try {
-          const msg = JSON.parse(str as string) as Message;
+          let msg: Message;
+          
+          // Check if it's already an object
+          if (typeof item === 'object' && item !== null) {
+            msg = item as Message;
+          } else if (typeof item === 'string') {
+            // Parse JSON string
+            msg = JSON.parse(item) as Message;
+          } else {
+            console.error('Unexpected message format:', typeof item, item);
+            return null;
+          }
+          
           // Convert date strings back to Date objects
-          msg.createdAt = new Date(msg.createdAt);
-          if (msg.sentAt) {
+          if (typeof msg.createdAt === 'string') {
+            msg.createdAt = new Date(msg.createdAt);
+          }
+          if (msg.sentAt && typeof msg.sentAt === 'string') {
             msg.sentAt = new Date(msg.sentAt);
           }
+          
           return msg;
         } catch (e) {
-          console.error('Error parsing message:', e);
+          console.error('Error parsing message:', e, 'Item:', item);
           return null;
         }
       })
