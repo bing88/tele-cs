@@ -148,12 +148,72 @@ npm run build
 npm start
 ```
 
+## Deployment to Vercel
+
+1. **Push your code to GitHub** (already done)
+
+2. **Import project to Vercel**:
+   - Go to [vercel.com](https://vercel.com)
+   - Click "Add New Project"
+   - Import your GitHub repository
+
+3. **Set Environment Variables** in Vercel:
+   - Go to Project Settings → Environment Variables
+   - Add the following:
+     ```
+     TELEGRAM_BOT_TOKEN=your_bot_token
+     TELEGRAM_WEBHOOK_SECRET=your_secret
+     TELEGRAM_WEBHOOK_URL=https://your-app.vercel.app/api/webhook
+     OPENAI_API_KEY=your_openai_key
+     NEXT_PUBLIC_APP_URL=https://your-app.vercel.app
+     ```
+
+4. **Deploy** - Vercel will automatically deploy
+
+5. **Set Telegram Webhook**:
+   ```bash
+   curl -X POST "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "url": "https://your-app.vercel.app/api/webhook",
+       "secret_token": "your_webhook_secret"
+     }'
+   ```
+
 ## Troubleshooting
+
+### "Failed to send message" error
+
+**Common causes:**
+
+1. **Missing Environment Variables on Vercel**
+   - Go to Vercel Dashboard → Your Project → Settings → Environment Variables
+   - Ensure `TELEGRAM_BOT_TOKEN` and `OPENAI_API_KEY` are set
+   - Redeploy after adding variables
+
+2. **Invalid Telegram Bot Token**
+   - Verify token at [@BotFather](https://t.me/botfather)
+   - Ensure token is correct (no extra spaces)
+
+3. **OpenAI API Key Issues**
+   - Check API key is valid
+   - Verify you have credits/quota
+   - Check OpenAI dashboard for errors
+
+4. **Chat ID Issues**
+   - Ensure chat ID is correct (should be a number as string)
+   - Bot must have received at least one message from the user
+
+**Debug steps:**
+- Check Vercel function logs: Vercel Dashboard → Your Project → Functions → View Logs
+- Look for specific error messages in the logs
+- Test API endpoint directly with curl to see detailed errors
 
 ### Webhook not receiving messages
 - Check that webhook URL is correctly set
 - Verify `TELEGRAM_WEBHOOK_SECRET` matches
 - Check server logs for errors
+- Test webhook: `curl https://your-app.vercel.app/api/webhook` (should return JSON)
 
 ### Translation not working
 - Verify `OPENAI_API_KEY` is set correctly
@@ -164,6 +224,7 @@ npm start
 - Check browser console for errors
 - Verify API endpoints are working
 - Check network tab for failed requests
+- Ensure webhook is receiving messages (check Vercel logs)
 
 ## License
 

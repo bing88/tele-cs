@@ -87,15 +87,17 @@ export async function sendMessage(
     throw new Error('TELEGRAM_BOT_TOKEN is not set');
   }
 
-  // Create bot instance for sending (webhook mode)
-  const botInstance = new TelegramBot(token);
+  // Create bot instance for sending (webhook mode - no polling)
+  const botInstance = new TelegramBot(token, { polling: false });
   
   try {
     // Translate English to Korean before sending
     const koreanText = await translateEnToKo(text);
+    console.log(`Sending message to chat ${chatId}: "${text}" -> "${koreanText}"`);
     
     // Send to Telegram
     const sentMessage = await botInstance.sendMessage(chatId, koreanText);
+    console.log(`Message sent successfully: ${sentMessage.message_id}`);
     
     // Store outbound message
     const storedMessage = addMessage({
@@ -113,7 +115,13 @@ export async function sendMessage(
 
     return sentMessage;
   } catch (error) {
-    console.error('Error sending message:', error);
+    const errorDetails = error instanceof Error ? error.message : String(error);
+    console.error('Error sending message:', {
+      chatId,
+      text,
+      error: errorDetails,
+      stack: error instanceof Error ? error.stack : undefined
+    });
     
     // Store failed message
     addMessage({
@@ -126,7 +134,8 @@ export async function sendMessage(
       status: 'failed',
     });
 
-    throw error;
+    // Re-throw with more context
+    throw new Error(`Failed to send Telegram message: ${errorDetails}`);
   }
 }
 

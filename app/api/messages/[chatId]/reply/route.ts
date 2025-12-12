@@ -26,8 +26,22 @@ export async function POST(
     });
   } catch (error) {
     console.error('Error sending reply:', error);
+    
+    // Provide more detailed error information
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const isTelegramError = errorMessage.includes('TELEGRAM_BOT_TOKEN') || errorMessage.includes('Telegram');
+    const isOpenAIError = errorMessage.includes('OPENAI_API_KEY') || errorMessage.includes('OpenAI');
+    
     return NextResponse.json(
-      { error: 'Failed to send message' },
+      { 
+        error: 'Failed to send message',
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
+        hint: isTelegramError 
+          ? 'Telegram bot token may be missing or invalid'
+          : isOpenAIError
+          ? 'OpenAI API key may be missing or invalid'
+          : 'Check server logs for details'
+      },
       { status: 500 }
     );
   }
