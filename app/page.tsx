@@ -110,8 +110,11 @@ export default function Home() {
   useEffect(() => {
     if (selectedChatId) {
       fetchMessages(selectedChatId);
+    } else {
+      // Clear messages when no chat is selected
+      setMessages([]);
     }
-  }, [selectedChatId]);
+  }, [selectedChatId, fetchMessages]);
 
   // Poll for new messages every 3 seconds (silent updates to prevent flickering)
   useEffect(() => {
