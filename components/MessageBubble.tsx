@@ -25,6 +25,11 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
             Original: {message.originalText}
           </p>
         )}
+        {message.translatedText && !isInbound && (
+          <p className="text-xs mt-1 opacity-70 italic">
+            Translated: {message.translatedText}
+          </p>
+        )}
         <p className="text-xs mt-1 opacity-60">
           {new Date(message.createdAt).toLocaleTimeString()}
         </p>
