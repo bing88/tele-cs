@@ -31,8 +31,16 @@ export default function Home() {
       const data = await res.json();
       const newConversations = data.conversations || [];
       
-      // Always update with new data (prevents flickering by keeping old data until new arrives)
-      setConversations(newConversations);
+      // In serverless (Vercel), cold starts might return empty arrays
+      // Only update if we have data OR if it's the initial load (not silent)
+      setConversations((current) => {
+        // If polling (silent) and we get empty, keep current data
+        if (silent && newConversations.length === 0 && current.length > 0) {
+          return current; // Preserve existing data during polling
+        }
+        // Otherwise update with new data
+        return newConversations;
+      });
       
       // Auto-select first conversation if none selected
       setSelectedChatId((current) => {
@@ -66,10 +74,18 @@ export default function Home() {
       // Only update if chatId still matches (prevents race conditions)
       setMessages((current) => {
         // Only update if this is still the selected chat
-        if (chatId === selectedChatIdRef.current) {
-          return newMessages;
+        if (chatId !== selectedChatIdRef.current) {
+          return current; // Keep current messages if chat changed
         }
-        return current; // Keep current messages if chat changed
+        
+        // In serverless (Vercel), cold starts might return empty arrays
+        // If polling (silent) and we get empty, keep current data
+        if (silent && newMessages.length === 0 && current.length > 0) {
+          return current; // Preserve existing data during polling
+        }
+        
+        // Otherwise update with new data
+        return newMessages;
       });
     } catch (error) {
       console.error('Error fetching messages:', error);
