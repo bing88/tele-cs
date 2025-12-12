@@ -29,17 +29,23 @@ export async function POST(
     
     // Provide more detailed error information
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    const isTelegramError = errorMessage.includes('TELEGRAM_BOT_TOKEN') || errorMessage.includes('Telegram');
-    const isOpenAIError = errorMessage.includes('OPENAI_API_KEY') || errorMessage.includes('OpenAI');
+    const isTelegramError = errorMessage.includes('TELEGRAM_BOT_TOKEN') || 
+                           errorMessage.includes('Telegram') ||
+                           errorMessage.includes('blocked') ||
+                           errorMessage.includes('Invalid request');
+    const isOpenAIError = errorMessage.includes('OPENAI_API_KEY') || 
+                         errorMessage.includes('OpenAI') ||
+                         errorMessage.includes('Translation failed');
     
+    // In production, still return some details for debugging
     return NextResponse.json(
       { 
         error: 'Failed to send message',
-        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
+        message: errorMessage, // Always return the actual error message
         hint: isTelegramError 
-          ? 'Telegram bot token may be missing or invalid'
+          ? 'Telegram error - user may have blocked bot or not started conversation'
           : isOpenAIError
-          ? 'OpenAI API key may be missing or invalid'
+          ? 'Translation error - check OpenAI API key and quota'
           : 'Check server logs for details'
       },
       { status: 500 }

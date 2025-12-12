@@ -90,20 +90,38 @@ export async function sendMessage(
   // Create bot instance for sending (webhook mode - no polling)
   const botInstance = new TelegramBot(token, { polling: false });
   
+  let koreanText: string;
+  
   try {
-    // Translate English to Korean before sending
-    const koreanText = await translateEnToKo(text);
-    console.log(`Sending message to chat ${chatId}: "${text}" -> "${koreanText}"`);
+    // Step 1: Translate English to Korean
+    console.log(`[Step 1] Translating message: "${text}"`);
+    koreanText = await translateEnToKo(text);
+    console.log(`[Step 1] Translation successful: "${koreanText}"`);
+  } catch (error) {
+    const errorDetails = error instanceof Error ? error.message : String(error);
+    console.error('[Step 1] Translation failed:', errorDetails);
+    throw new Error(`Translation failed: ${errorDetails}`);
+  }
+
+  try {
+    // Step 2: Send to Telegram
+    // Convert chatId to number for private chats (Telegram API expects number)
+    const numericChatId = parseInt(chatId);
+    if (isNaN(numericChatId)) {
+      throw new Error(`Invalid chatId format: ${chatId}. Expected a number.`);
+    }
+
+    console.log(`[Step 2] Sending message to chat ${numericChatId}: "${koreanText}"`);
     
-    // Send to Telegram
-    const sentMessage = await botInstance.sendMessage(chatId, koreanText);
-    console.log(`Message sent successfully: ${sentMessage.message_id}`);
+    // Send to Telegram (use numeric chatId)
+    const sentMessage = await botInstance.sendMessage(numericChatId, koreanText);
+    console.log(`[Step 2] Message sent successfully: ${sentMessage.message_id}`);
     
     // Store outbound message
     const storedMessage = addMessage({
       telegramChatId: chatId,
       telegramMessageId: sentMessage.message_id,
-      telegramUserId: parseInt(chatId), // Chat ID is usually the user ID for private chats
+      telegramUserId: numericChatId,
       direction: 'outbound',
       originalText: text,
       translatedText: koreanText,
@@ -116,10 +134,17 @@ export async function sendMessage(
     return sentMessage;
   } catch (error) {
     const errorDetails = error instanceof Error ? error.message : String(error);
-    console.error('Error sending message:', {
+    const errorCode = (error as any)?.response?.body?.error_code;
+    const errorDescription = (error as any)?.response?.body?.description;
+    
+    console.error('[Step 2] Telegram send failed:', {
       chatId,
+      numericChatId: parseInt(chatId),
       text,
+      translatedText: koreanText,
       error: errorDetails,
+      errorCode,
+      errorDescription,
       stack: error instanceof Error ? error.stack : undefined
     });
     
@@ -127,15 +152,25 @@ export async function sendMessage(
     addMessage({
       telegramChatId: chatId,
       telegramMessageId: 0,
-      telegramUserId: parseInt(chatId),
+      telegramUserId: parseInt(chatId) || 0,
       direction: 'outbound',
       originalText: text,
+      translatedText: koreanText,
       language: 'en',
       status: 'failed',
     });
 
-    // Re-throw with more context
-    throw new Error(`Failed to send Telegram message: ${errorDetails}`);
+    // Provide more specific error message
+    let errorMsg = `Failed to send Telegram message: ${errorDetails}`;
+    if (errorCode === 403) {
+      errorMsg = 'Bot is blocked by user or user has not started conversation with bot';
+    } else if (errorCode === 400) {
+      errorMsg = `Invalid request: ${errorDescription || errorDetails}`;
+    } else if (errorCode) {
+      errorMsg = `Telegram API error (${errorCode}): ${errorDescription || errorDetails}`;
+    }
+
+    throw new Error(errorMsg);
   }
 }
 
