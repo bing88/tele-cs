@@ -118,7 +118,7 @@ export async function sendMessage(
     console.log(`[Step 2] Message sent successfully: ${sentMessage.message_id}`);
     
     // Store outbound message
-    const storedMessage = addMessage({
+    const storedMessage = await addMessage({
       telegramChatId: chatId,
       telegramMessageId: sentMessage.message_id,
       telegramUserId: numericChatId,
@@ -129,7 +129,7 @@ export async function sendMessage(
       status: 'sent',
     });
 
-    updateMessageStatus(storedMessage.id, 'sent', new Date());
+    await updateMessageStatus(storedMessage.id, 'sent', new Date());
 
     return sentMessage;
   } catch (error) {
@@ -149,7 +149,7 @@ export async function sendMessage(
     });
     
     // Store failed message
-    addMessage({
+    await addMessage({
       telegramChatId: chatId,
       telegramMessageId: 0,
       telegramUserId: parseInt(chatId) || 0,

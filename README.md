@@ -142,16 +142,25 @@ telegram-cs/
 
 **For production use**, you **MUST** use a shared database (PostgreSQL, MongoDB, Redis, etc.) instead of in-memory storage.
 
-### Recommended: Vercel KV (Redis)
+### ✅ Migrated to Vercel KV (Redis)
 
-For a Vercel demo, **Vercel KV** is the best alternative:
-- ✅ Built into Vercel (easy setup)
+The app has been **migrated to Vercel KV**! This solves the serverless isolation problem.
+
+**Setup Required:**
+1. Go to Vercel Dashboard → Storage → Create Database → KV
+2. Name it (e.g., `telegram-cs-kv`)
+3. Deploy - environment variables are auto-added!
+
+See [VERCEL_KV_SETUP.md](./VERCEL_KV_SETUP.md) for setup instructions.
+
+**Benefits:**
+- ✅ Consistent data across all serverless instances
+- ✅ Data persists between deployments
 - ✅ Free tier (30K reads/day, 1K writes/day)
-- ✅ Fast (Redis, sub-millisecond)
-- ✅ Shared across all serverless instances
-- ✅ Solves the isolation problem
+- ✅ Fast (Redis, sub-millisecond latency)
+- ✅ Built into Vercel
 
-See [STORAGE_OPTIONS.md](./STORAGE_OPTIONS.md) for detailed comparison and migration guide.
+See [STORAGE_OPTIONS.md](./STORAGE_OPTIONS.md) for detailed comparison.
 
 ## Development
 

@@ -3,7 +3,7 @@ import { generateSampleData } from '@/lib/store';
 
 export async function POST(request: NextRequest) {
   try {
-    generateSampleData();
+    await generateSampleData();
     return NextResponse.json({ 
       success: true,
       message: 'Sample data generated successfully',
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
 // Also allow GET for easy testing
 export async function GET() {
   try {
-    generateSampleData();
+    await generateSampleData();
     return NextResponse.json({ 
       success: true,
       message: 'Sample data generated successfully',

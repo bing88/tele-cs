@@ -53,8 +53,8 @@ export async function POST(request: NextRequest) {
           translatedText = msg.text;
         }
 
-        // Store message in memory
-        addMessage({
+        // Store message in KV
+        await addMessage({
           telegramChatId: chatId,
           telegramMessageId: msg.message_id,
           telegramUserId: userId,

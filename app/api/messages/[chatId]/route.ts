@@ -7,7 +7,7 @@ export async function GET(
 ) {
   try {
     const { chatId } = await params;
-    const messages = getMessagesByChatId(chatId);
+    const messages = await getMessagesByChatId(chatId);
     
     // Sort by creation time (oldest first)
     const sorted = [...messages].sort((a, b) => 

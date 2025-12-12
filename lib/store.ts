@@ -1,8 +1,5 @@
 import { Message, Conversation } from './types';
-
-// In-memory storage
-const messages: Message[] = [];
-const conversations: Map<string, Message[]> = new Map();
+import { kv } from '@vercel/kv';
 
 // Generate unique ID
 function generateId(): string {
@@ -10,91 +7,189 @@ function generateId(): string {
 }
 
 // Store a message
-export function addMessage(
+export async function addMessage(
   message: Omit<Message, 'id' | 'createdAt'>,
   createdAt?: Date
-): Message {
+): Promise<Message> {
   const newMessage: Message = {
     ...message,
     id: generateId(),
     createdAt: createdAt || new Date(),
   };
 
-  messages.push(newMessage);
-
-  // Update conversations map
-  if (!conversations.has(message.telegramChatId)) {
-    conversations.set(message.telegramChatId, []);
-  }
-  conversations.get(message.telegramChatId)!.push(newMessage);
+  // Store message in list (messages are stored as JSON strings in a list)
+  await kv.lpush(`messages:${message.telegramChatId}`, JSON.stringify(newMessage));
+  
+  // Add chat to conversations set
+  await kv.sadd('conversations', message.telegramChatId);
+  
+  // Store/update conversation metadata
+  await kv.hset(`conversation:${message.telegramChatId}`, {
+    userId: message.telegramUserId.toString(),
+    username: message.telegramUsername || '',
+    lastActivity: newMessage.createdAt.toISOString(),
+  });
 
   return newMessage;
 }
 
 // Get all messages for a specific chat
-export function getMessagesByChatId(chatId: string): Message[] {
-  return conversations.get(chatId) || [];
+export async function getMessagesByChatId(chatId: string): Promise<Message[]> {
+  try {
+    const messageStrings = await kv.lrange(`messages:${chatId}`, 0, -1);
+    if (!messageStrings || messageStrings.length === 0) {
+      return [];
+    }
+    
+    // Parse JSON strings back to Message objects
+    const messages = messageStrings
+      .map(str => {
+        try {
+          const msg = JSON.parse(str as string) as Message;
+          // Convert date strings back to Date objects
+          msg.createdAt = new Date(msg.createdAt);
+          if (msg.sentAt) {
+            msg.sentAt = new Date(msg.sentAt);
+          }
+          return msg;
+        } catch (e) {
+          console.error('Error parsing message:', e);
+          return null;
+        }
+      })
+      .filter((msg): msg is Message => msg !== null);
+    
+    return messages;
+  } catch (error) {
+    console.error('Error getting messages from KV:', error);
+    return [];
+  }
 }
 
 // Get all conversations (with latest message)
-export function getAllConversations(): Conversation[] {
-  const convs: Conversation[] = [];
+export async function getAllConversations(): Promise<Conversation[]> {
+  try {
+    const chatIds = await kv.smembers('conversations');
+    if (!chatIds || chatIds.length === 0) {
+      return [];
+    }
 
-  conversations.forEach((msgs, chatId) => {
-    if (msgs.length === 0) return;
+    const convs: Conversation[] = [];
 
-    const sorted = [...msgs].sort((a, b) => 
-      a.createdAt.getTime() - b.createdAt.getTime()
+    for (const chatId of chatIds) {
+      const messages = await getMessagesByChatId(chatId as string);
+      if (messages.length === 0) continue;
+
+      const sorted = [...messages].sort((a, b) => 
+        a.createdAt.getTime() - b.createdAt.getTime()
+      );
+      const lastMessage = sorted[sorted.length - 1];
+      const firstMessage = sorted[0];
+
+      // Get conversation metadata
+      const metadata = await kv.hgetall(`conversation:${chatId}`);
+      
+      convs.push({
+        chatId: chatId as string,
+        userId: metadata?.userId ? parseInt(metadata.userId as string) : firstMessage.telegramUserId,
+        username: (metadata?.username as string) || firstMessage.telegramUsername,
+        lastMessage,
+        messageCount: messages.length,
+        lastActivity: lastMessage.createdAt,
+      });
+    }
+
+    // Sort by last activity (most recent first)
+    return convs.sort((a, b) => 
+      b.lastActivity.getTime() - a.lastActivity.getTime()
     );
-    const lastMessage = sorted[sorted.length - 1];
-    const firstMessage = sorted[0];
-
-    convs.push({
-      chatId,
-      userId: firstMessage.telegramUserId,
-      username: firstMessage.telegramUsername,
-      lastMessage,
-      messageCount: msgs.length,
-      lastActivity: lastMessage.createdAt,
-    });
-  });
-
-  // Sort by last activity (most recent first)
-  return convs.sort((a, b) => 
-    b.lastActivity.getTime() - a.lastActivity.getTime()
-  );
+  } catch (error) {
+    console.error('Error getting conversations from KV:', error);
+    return [];
+  }
 }
 
 // Get a single message by ID
-export function getMessageById(id: string): Message | undefined {
-  return messages.find(msg => msg.id === id);
+export async function getMessageById(id: string): Promise<Message | undefined> {
+  try {
+    // Get all conversations to search through
+    const chatIds = await kv.smembers('conversations');
+    
+    for (const chatId of chatIds) {
+      const messages = await getMessagesByChatId(chatId as string);
+      const message = messages.find(msg => msg.id === id);
+      if (message) {
+        return message;
+      }
+    }
+    
+    return undefined;
+  } catch (error) {
+    console.error('Error getting message by ID from KV:', error);
+    return undefined;
+  }
 }
 
 // Update message status
-export function updateMessageStatus(
+export async function updateMessageStatus(
   id: string,
   status: Message['status'],
   sentAt?: Date
-): Message | undefined {
-  const message = messages.find(msg => msg.id === id);
-  if (message) {
-    message.status = status;
-    if (sentAt) {
-      message.sentAt = sentAt;
+): Promise<Message | undefined> {
+  try {
+    const message = await getMessageById(id);
+    if (!message) {
+      return undefined;
     }
+
+    // Update the message
+    const updatedMessage: Message = {
+      ...message,
+      status,
+      sentAt: sentAt || message.sentAt,
+    };
+
+    // Remove old message and add updated one
+    const messages = await getMessagesByChatId(message.telegramChatId);
+    const updatedMessages = messages.map(msg => 
+      msg.id === id ? updatedMessage : msg
+    );
+
+    // Replace the entire list (simpler than trying to update a single item)
+    await kv.del(`messages:${message.telegramChatId}`);
+    if (updatedMessages.length > 0) {
+      const messageStrings = updatedMessages.map(msg => JSON.stringify(msg));
+      await kv.lpush(`messages:${message.telegramChatId}`, ...messageStrings);
+    }
+
+    return updatedMessage;
+  } catch (error) {
+    console.error('Error updating message status in KV:', error);
+    return undefined;
   }
-  return message;
 }
 
 // Clear all messages (for testing/reset)
-export function clearAll(): void {
-  messages.length = 0;
-  conversations.clear();
+export async function clearAll(): Promise<void> {
+  try {
+    const chatIds = await kv.smembers('conversations');
+    
+    // Delete all message lists
+    for (const chatId of chatIds) {
+      await kv.del(`messages:${chatId}`);
+      await kv.del(`conversation:${chatId}`);
+    }
+    
+    // Clear conversations set
+    await kv.del('conversations');
+  } catch (error) {
+    console.error('Error clearing KV store:', error);
+  }
 }
 
 // Generate sample data for testing
-export function generateSampleData(): void {
-  clearAll(); // Clear existing data first
+export async function generateSampleData(): Promise<void> {
+  await clearAll(); // Clear existing data first
 
   const now = new Date();
   
@@ -102,7 +197,7 @@ export function generateSampleData(): void {
   const chatId1 = '1236855149';
   const userId1 = 1236855149;
   
-  addMessage({
+  await addMessage({
     telegramChatId: chatId1,
     telegramMessageId: 1,
     telegramUserId: userId1,
@@ -114,7 +209,7 @@ export function generateSampleData(): void {
     status: 'sent',
   }, new Date(now.getTime() - 10 * 60000)); // 10 minutes ago
 
-  addMessage({
+  await addMessage({
     telegramChatId: chatId1,
     telegramMessageId: 2,
     telegramUserId: userId1,
@@ -126,7 +221,7 @@ export function generateSampleData(): void {
     status: 'sent',
   }, new Date(now.getTime() - 9 * 60000)); // 9 minutes ago
 
-  addMessage({
+  await addMessage({
     telegramChatId: chatId1,
     telegramMessageId: 3,
     telegramUserId: userId1,
@@ -138,7 +233,7 @@ export function generateSampleData(): void {
     status: 'sent',
   }, new Date(now.getTime() - 8 * 60000)); // 8 minutes ago
 
-  addMessage({
+  await addMessage({
     telegramChatId: chatId1,
     telegramMessageId: 4,
     telegramUserId: userId1,
@@ -150,7 +245,7 @@ export function generateSampleData(): void {
     status: 'sent',
   }, new Date(now.getTime() - 7 * 60000)); // 7 minutes ago
 
-  addMessage({
+  await addMessage({
     telegramChatId: chatId1,
     telegramMessageId: 5,
     telegramUserId: userId1,
@@ -166,7 +261,7 @@ export function generateSampleData(): void {
   const chatId2 = '987654321';
   const userId2 = 987654321;
 
-  addMessage({
+  await addMessage({
     telegramChatId: chatId2,
     telegramMessageId: 1,
     telegramUserId: userId2,
@@ -178,7 +273,7 @@ export function generateSampleData(): void {
     status: 'sent',
   }, new Date(now.getTime() - 15 * 60000)); // 15 minutes ago
 
-  addMessage({
+  await addMessage({
     telegramChatId: chatId2,
     telegramMessageId: 2,
     telegramUserId: userId2,
@@ -190,7 +285,7 @@ export function generateSampleData(): void {
     status: 'sent',
   }, new Date(now.getTime() - 14 * 60000)); // 14 minutes ago
 
-  addMessage({
+  await addMessage({
     telegramChatId: chatId2,
     telegramMessageId: 3,
     telegramUserId: userId2,
@@ -206,7 +301,7 @@ export function generateSampleData(): void {
   const chatId3 = '555666777';
   const userId3 = 555666777;
 
-  addMessage({
+  await addMessage({
     telegramChatId: chatId3,
     telegramMessageId: 1,
     telegramUserId: userId3,
@@ -218,7 +313,7 @@ export function generateSampleData(): void {
     status: 'sent',
   }, new Date(now.getTime() - 30 * 60000)); // 30 minutes ago
 
-  addMessage({
+  await addMessage({
     telegramChatId: chatId3,
     telegramMessageId: 2,
     telegramUserId: userId3,
@@ -230,7 +325,7 @@ export function generateSampleData(): void {
     status: 'sent',
   }, new Date(now.getTime() - 29 * 60000)); // 29 minutes ago
 
-  addMessage({
+  await addMessage({
     telegramChatId: chatId3,
     telegramMessageId: 3,
     telegramUserId: userId3,
@@ -246,7 +341,7 @@ export function generateSampleData(): void {
   const chatId4 = '111222333';
   const userId4 = 111222333;
 
-  addMessage({
+  await addMessage({
     telegramChatId: chatId4,
     telegramMessageId: 1,
     telegramUserId: userId4,
@@ -258,4 +353,3 @@ export function generateSampleData(): void {
     status: 'sent',
   }, new Date(now.getTime() - 1 * 60000)); // 1 minute ago
 }
-
