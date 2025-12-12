@@ -142,6 +142,17 @@ telegram-cs/
 
 **For production use**, you **MUST** use a shared database (PostgreSQL, MongoDB, Redis, etc.) instead of in-memory storage.
 
+### Recommended: Vercel KV (Redis)
+
+For a Vercel demo, **Vercel KV** is the best alternative:
+- ✅ Built into Vercel (easy setup)
+- ✅ Free tier (30K reads/day, 1K writes/day)
+- ✅ Fast (Redis, sub-millisecond)
+- ✅ Shared across all serverless instances
+- ✅ Solves the isolation problem
+
+See [STORAGE_OPTIONS.md](./STORAGE_OPTIONS.md) for detailed comparison and migration guide.
+
 ## Development
 
 ```bash
